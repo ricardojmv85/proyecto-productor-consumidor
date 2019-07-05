@@ -4,6 +4,7 @@ import numpy as np
 import threading
 import time
 import argparse
+from threading import Lock
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--producers", required=True)
@@ -14,15 +15,46 @@ ap.add_argument("-m2", "--matrix2", required=True)
 args = vars(ap.parse_args())
 
 # CATCHING ARGUMENTS
-producers=str(args["producers"])
-consumers=str(args["consumers"])
-buffer=str(args["buffer"])
+producers=int(args["producers"])
+consumers=int(args["consumers"])
+buffer=int(args["buffer"])
 m1=str(args["matrix1"])
 m2=str(args["matrix2"])
+
+lock=Lock()
+
+# PRODUCER FUNCTION
+def producer_function(name):
+    print(name," init")
+    global tasks, result
+    while True:
+        lock.acquire()
+        try:
+            task=tasks[0]
+            tasks.pop(0)
+        except:
+            task=""
+        lock.release()
+        if task=="":
+            break
+        else:
+            print("produsco")
 
 
 if __name__ == "__main__":
     # dataframes initialization
     df1=pd.read_csv(m1+'.csv',header=None)
     df2=pd.read_csv(m2+'.csv',header=None)
-    print("que onda we")
+    tasks = []
+
+    # TASK CREATION
+    for i in range(len(df1)):
+        for j in range(len(df2)):
+            tasks.append([list(df1.iloc[i]),list(df2[j]),[i,j]])
+    
+    # CREATING PRODUCERS
+    for i in range(producers):
+        x = threading.Thread(target=producer_function, args=(i,))
+        x.start()
+        x.join()
+    
