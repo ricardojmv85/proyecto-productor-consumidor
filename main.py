@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import time
 import argparse
-from threading import Lock
+from threading import Lock, Semaphore
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--producers", required=True)
@@ -22,6 +22,9 @@ m1=str(args["matrix1"])
 m2=str(args["matrix2"])
 
 lock=Lock()
+buffer_access = Semaphore(1)
+spaces_to_fill = Semaphore(0)
+empty_spaces = Semaphore(buffer) 
 
 # PRODUCER FUNCTION
 def producer_function(name):
@@ -38,7 +41,15 @@ def producer_function(name):
         if task=="":
             break
         else:
-            print(name, " producing")
+            for i in range(len(task[0])):
+                item = [task[0][i],task[1][i]]
+                empty_spaces.acquire()
+                buffer_access.acquire()
+                print(name, " inseting into buffer ",item)
+                buffer_access.release()
+                spaces_to_fill.release()
+
+
 
 # CONSUMER FUNCTION
 def consumer_function(name):
@@ -69,7 +80,7 @@ if __name__ == "__main__":
     for i in range(len(df1)):
         for j in range(len(df2)):
             tasks.append([list(df1.iloc[i]),list(df2[j]),[i,j]])
-    
+ 
     # CREATING PRODUCERS
     for i in range(producers):
         x = threading.Thread(target=producer_function, args=(i,))
