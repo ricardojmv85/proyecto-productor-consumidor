@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import time
 import argparse
-import mysql.connector
+import pymysql
 from threading import Lock, Semaphore
 
 ap = argparse.ArgumentParser()
@@ -22,12 +22,13 @@ buffer=int(args["buffer"])
 m1=str(args["matrix1"])
 m2=str(args["matrix2"])
 
-mydb = mysql.connector.connect(
-  host="mazinger.cd3weixjwsqp.us-east-2.rds.amazonaws.com",
-  user="root",
-  passwd="mazinger123",
-  database="mazinger"
-)
+DB_NAME='mazinger'
+DB_USER='root'
+DB_PASS='mazinger123'
+DB_HOST='mazinger.cd3weixjwsqp.us-east-2.rds.amazonaws.com'
+DB_PORT=3306
+conn = pymysql.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS, port=DB_PORT)
+mycursor = conn.cursor()
 
 lock=Lock()
 buffer_access = Semaphore(1)
@@ -98,13 +99,15 @@ if __name__ == "__main__":
     buffer=[]
     finish=True
     # TASK CREATION AND MYSQL TABLE INIT
-    mycursor = mydb.cursor()
-    sql = "INSERT INTO results VALUES (%s, %s, %s, %s, %s)"
+    sql = 'Truncate table mazinger.results'
+    mycursor.execute(sql)
+    conn.commit()
     for i in range(len(df1)):
         for j in range(len(df2)):
             tasks.append([list(df1.iloc[i]),list(df2[j]),[i,j]])
-            val = (i, j, "0", "0", "0")
-            mycursor.execute(sql, val)
+            sql = 'INSERT INTO mazinger.results VALUES ("'+str(i)+'", "'+str(j)+'", "'+str(0)+'", "'+str(0)+'", "'+str(0)+'")'
+            mycursor.execute(sql)
+            conn.commit()
 
  
     # CREATING PRODUCERS
