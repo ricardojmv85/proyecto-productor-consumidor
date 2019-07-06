@@ -4,6 +4,7 @@ import numpy as np
 import threading
 import time
 import argparse
+import mysql.connector
 from threading import Lock, Semaphore
 
 ap = argparse.ArgumentParser()
@@ -20,6 +21,13 @@ consumers=int(args["consumers"])
 buffer=int(args["buffer"])
 m1=str(args["matrix1"])
 m2=str(args["matrix2"])
+
+mydb = mysql.connector.connect(
+  host="mazinger.cd3weixjwsqp.us-east-2.rds.amazonaws.com",
+  user="root",
+  passwd="mazinger123",
+  database="mazinger"
+)
 
 lock=Lock()
 buffer_access = Semaphore(1)
@@ -89,10 +97,15 @@ if __name__ == "__main__":
     tasks = []
     buffer=[]
     finish=True
-    # TASK CREATION
+    # TASK CREATION AND MYSQL TABLE INIT
+    mycursor = mydb.cursor()
+    sql = "INSERT INTO results VALUES (%s, %s, %s, %s, %s)"
     for i in range(len(df1)):
         for j in range(len(df2)):
             tasks.append([list(df1.iloc[i]),list(df2[j]),[i,j]])
+            val = (i, j, "0", "0", "0")
+            mycursor.execute(sql, val)
+
  
     # CREATING PRODUCERS
     for i in range(producers):
