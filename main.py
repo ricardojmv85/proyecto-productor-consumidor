@@ -38,7 +38,25 @@ def producer_function(name):
         if task=="":
             break
         else:
-            print("produsco")
+            print(name, " producing")
+
+# CONSUMER FUNCTION
+def consumer_function(name):
+    print(name," init")
+    global tasks, result, finish
+    while True:
+        lock.acquire()
+        try:
+            task=tasks[0]
+            tasks.pop(0)
+        except:
+            task=""
+        lock.release()
+        if task=="":
+            finish=False
+            break
+        else:
+            print(name, " consuming")
 
 
 if __name__ == "__main__":
@@ -46,7 +64,7 @@ if __name__ == "__main__":
     df1=pd.read_csv(m1+'.csv',header=None)
     df2=pd.read_csv(m2+'.csv',header=None)
     tasks = []
-
+    finish=True
     # TASK CREATION
     for i in range(len(df1)):
         for j in range(len(df2)):
@@ -56,5 +74,12 @@ if __name__ == "__main__":
     for i in range(producers):
         x = threading.Thread(target=producer_function, args=(i,))
         x.start()
-        x.join()
+    # CREATING CONSUMERS
+    # for i in range(consumers):
+    #     x = threading.Thread(target=consumer_function, args=(i,))
+    #     x.start()
+    #     # x.join()
+    while(finish):
+        True
+    
     
