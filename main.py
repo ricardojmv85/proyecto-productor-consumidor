@@ -23,14 +23,15 @@ m2=str(args["matrix2"])
 
 lock=Lock()
 buffer_access = Semaphore(1)
-spaces_to_fill = Semaphore(0)
-empty_spaces = Semaphore(buffer) 
+filled = Semaphore(0)
+empty = Semaphore(buffer) 
 
 # PRODUCER FUNCTION
 def producer_function(name):
     print(name," init")
-    global tasks, result
+    global tasks, result, buffer
     while True:
+        # LOCKING THE POOL OF TASKS TO OBTAIN A ROW/COLUMN TASK
         lock.acquire()
         try:
             task=tasks[0]
@@ -42,32 +43,43 @@ def producer_function(name):
             break
         else:
             for i in range(len(task[0])):
-                item = [task[0][i],task[1][i]]
-                empty_spaces.acquire()
+                # INSERTING MULTI ITEM TO THE BUFFER
+                item = [task[0][i],task[1][i],task[2]]
+                # SUBS 1 TO EMPTY SPACES IN BUFFER
+                empty.acquire()
+                # SUBS 1 TO ACCESS THE BUFFER
                 buffer_access.acquire()
-                print(name, " inseting into buffer ",item)
+                # INSERTING ITEM TO BUFFER
+                print(name, " inserting into buffer ",item)
+                buffer.append(item)
+                # ADDING 1 TO THE BUFFER ACCES
                 buffer_access.release()
-                spaces_to_fill.release()
+                # ADDING 1 TO THE FILLED SPACES IN BUFFER
+                filled.release()
 
 
 
 # CONSUMER FUNCTION
 def consumer_function(name):
     print(name," init")
-    global tasks, result, finish
+    global tasks, result, finish, buffer
     while True:
-        lock.acquire()
-        try:
-            task=tasks[0]
-            tasks.pop(0)
-        except:
-            task=""
-        lock.release()
-        if task=="":
-            finish=False
-            break
-        else:
-            print(name, " consuming")
+        # SUBS 1 TO FILLED SPACES IN BUFFER
+        filled.acquire()
+        # SUBS 1 TO ACCESS THE BUFFER
+        buffer_access.acquire()
+        # EXTRACTING THE FIRST ITEM ON THE BUFFER
+        item=buffer.pop(0)
+        # ADDING 1 TO THE BUFFER ACCESS
+        buffer_access.release()
+        # ADDING 1 TO THE EMPY SPACES IN BUFFER
+        empty.release()
+        # CONSUMING THE ITEM MULTIPLICATION
+        result=item[0]*item[1]
+        # SENDING TO MYSQL
+        print(name, " sending ",result,item[2])
+
+        
 
 
 if __name__ == "__main__":
@@ -75,6 +87,7 @@ if __name__ == "__main__":
     df1=pd.read_csv(m1+'.csv',header=None)
     df2=pd.read_csv(m2+'.csv',header=None)
     tasks = []
+    buffer=[]
     finish=True
     # TASK CREATION
     for i in range(len(df1)):
@@ -86,9 +99,9 @@ if __name__ == "__main__":
         x = threading.Thread(target=producer_function, args=(i,))
         x.start()
     # CREATING CONSUMERS
-    # for i in range(consumers):
-    #     x = threading.Thread(target=consumer_function, args=(i,))
-    #     x.start()
+    for i in range(consumers):
+        x = threading.Thread(target=consumer_function, args=(i,))
+        x.start()
     #     # x.join()
     while(finish):
         True
