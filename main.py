@@ -5,6 +5,7 @@ import threading
 import time
 import argparse
 import pymysql
+from datetime import datetime
 from threading import Lock, Semaphore
 
 ap = argparse.ArgumentParser()
@@ -31,6 +32,7 @@ conn = pymysql.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB
 mycursor = conn.cursor()
 
 lock=Lock()
+lock2=Lock()
 buffer_access = Semaphore(1)
 filled = Semaphore(0)
 empty = Semaphore(buffer) 
@@ -38,7 +40,7 @@ empty = Semaphore(buffer)
 # PRODUCER FUNCTION
 def producer_function(name):
     print(name," init")
-    global tasks, result, buffer
+    global tasks, buffer
     while True:
         # LOCKING THE POOL OF TASKS TO OBTAIN A ROW/COLUMN TASK
         lock.acquire()
@@ -71,8 +73,9 @@ def producer_function(name):
 # CONSUMER FUNCTION
 def consumer_function(name):
     print(name," init")
-    global tasks, result, finish, buffer
+    global tasks, finish, buffer
     while True:
+        t1 = datetime.now()
         # SUBS 1 TO FILLED SPACES IN BUFFER
         filled.acquire()
         # SUBS 1 TO ACCESS THE BUFFER
@@ -84,9 +87,14 @@ def consumer_function(name):
         # ADDING 1 TO THE EMPY SPACES IN BUFFER
         empty.release()
         # CONSUMING THE ITEM MULTIPLICATION
-        result=item[0]*item[1]
+        res=item[0]*item[1]
         # SENDING TO MYSQL
-        print(name, " sending ",result,item[2])
+        print(name, " sending ",res,item[2])
+        lock2.acquire()
+        conn.begin()
+        mycursor.execute('update mazinger.results set result=result+"'+str(res)+'" , time=time+"'+str(int((t1-datetime.now()).microseconds/1000))+'" where results.row="'+str(item[2][0])+'" and results.column ="'+str(item[2][1])+'"')
+        conn.commit()
+        lock2.release()
 
         
 
@@ -105,7 +113,7 @@ if __name__ == "__main__":
     for i in range(len(df1)):
         for j in range(len(df2)):
             tasks.append([list(df1.iloc[i]),list(df2[j]),[i,j]])
-            sql = 'INSERT INTO mazinger.results VALUES ("'+str(i)+'", "'+str(j)+'", "'+str(0)+'", "'+str(0)+'", "'+str(0)+'")'
+            sql = 'INSERT INTO mazinger.results VALUES ("'+str(i)+'", "'+str(j)+'", "'+str(0)+'", "'+str(0)+'")'
             mycursor.execute(sql)
             conn.commit()
 
