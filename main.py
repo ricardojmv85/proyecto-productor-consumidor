@@ -91,7 +91,6 @@ def consumer_function(name):
         # SENDING TO MYSQL
         print(name, " sending ",res,item[2])
         lock2.acquire()
-        conn.begin()
         mycursor.execute('update mazinger.results set result=result+"'+str(res)+'" , time=time+"'+str(int((t1-datetime.now()).microseconds/1000))+'" where results.row="'+str(item[2][0])+'" and results.column ="'+str(item[2][1])+'"')
         conn.commit()
         lock2.release()
