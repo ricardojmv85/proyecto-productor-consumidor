@@ -45,8 +45,8 @@ def producer_function(name):
         # LOCKING THE POOL OF TASKS TO OBTAIN A ROW/COLUMN TASK
         lock.acquire()
         try:
-            task=tasks[0]
-            tasks.pop(0)
+            task=tasks.pop(0)
+            t1 = datetime.now()
         except:
             task=""
         lock.release()
@@ -55,7 +55,7 @@ def producer_function(name):
         else:
             for i in range(len(task[0])):
                 # INSERTING MULTI ITEM TO THE BUFFER
-                item = [task[0][i],task[1][i],task[2]]
+                item = [task[0][i],task[1][i],task[2],t1]
                 # SUBS 1 TO EMPTY SPACES IN BUFFER
                 empty.acquire()
                 # SUBS 1 TO ACCESS THE BUFFER
@@ -75,7 +75,6 @@ def consumer_function(name):
     print(name," init")
     global tasks, finish, buffer
     while True:
-        t1 = datetime.now()
         # SUBS 1 TO FILLED SPACES IN BUFFER
         filled.acquire()
         # SUBS 1 TO ACCESS THE BUFFER
@@ -91,7 +90,7 @@ def consumer_function(name):
         # SENDING TO MYSQL
         print(name, " sending ",res,item[2])
         lock2.acquire()
-        mycursor.execute('update mazinger.results set result=result+"'+str(res)+'" , time=time+"'+str(int((t1-datetime.now()).microseconds/1000))+'" where results.row="'+str(item[2][0])+'" and results.column ="'+str(item[2][1])+'"')
+        mycursor.execute('update mazinger.results set result=result+"'+str(res)+'" , time=time+"'+str(int((item[3]-datetime.now()).microseconds/1000))+'" where results.row="'+str(item[2][0])+'" and results.column ="'+str(item[2][1])+'"')
         conn.commit()
         lock2.release()
 
