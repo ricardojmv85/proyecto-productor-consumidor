@@ -23,6 +23,7 @@ buffer=int(args["buffer"])
 m1=str(args["matrix1"])
 m2=str(args["matrix2"])
 
+# BD CONNECTION PARAMETERS  
 DB_NAME='mazinger'
 DB_USER='root'
 DB_PASS='mazinger123'
@@ -31,8 +32,9 @@ DB_PORT=3306
 conn = pymysql.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS, port=DB_PORT)
 mycursor = conn.cursor()
 
-lock=Lock()
-lock2=Lock()
+# LOCKS AND SEMAPHORES
+lock=Lock() # TASKS POOL ACCESS
+lock2=Lock() # DB ACCESS
 buffer_access = Semaphore(1)
 filled = Semaphore(0)
 empty = Semaphore(buffer) 
@@ -68,12 +70,10 @@ def producer_function(name):
                 # ADDING 1 TO THE FILLED SPACES IN BUFFER
                 filled.release()
 
-
-
 # CONSUMER FUNCTION
 def consumer_function(name):
     print(name," init")
-    global tasks, finish, buffer
+    global tasks, buffer
     while True:
         # SUBS 1 TO FILLED SPACES IN BUFFER
         filled.acquire()
@@ -94,17 +94,13 @@ def consumer_function(name):
         conn.commit()
         lock2.release()
 
-        
-
-
+# MAIN THREAD
 if __name__ == "__main__":
     # dataframes initialization
     df1=pd.read_csv(m1+'.csv',header=None)
     df2=pd.read_csv(m2+'.csv',header=None)
-    tasks = []
-    buffer=[]
-    finish=True
-    # TASK CREATION AND MYSQL TABLE INIT
+    tasks, buffer = [],[]
+    # TASKS POOL CREATION AND MYSQL TABLE INIT
     sql = 'Truncate table mazinger.results'
     mycursor.execute(sql)
     conn.commit()
@@ -114,18 +110,16 @@ if __name__ == "__main__":
             sql = 'INSERT INTO mazinger.results VALUES ("'+str(i)+'", "'+str(j)+'", "'+str(0)+'", "'+str(0)+'")'
             mycursor.execute(sql)
             conn.commit()
-
+            
  
     # CREATING PRODUCERS
     for i in range(producers):
-        x = threading.Thread(target=producer_function, args=(i,))
-        x.start()
+        threading.Thread(target=producer_function, args=(i,)).start()
     # CREATING CONSUMERS
     for i in range(consumers):
-        x = threading.Thread(target=consumer_function, args=(i,))
-        x.start()
-    #     # x.join()
-    while(finish):
-        True
+        threading.Thread(target=consumer_function, args=(i,)).start()
+    # while(finish!=0):
+    #     print(finish)
+    #     True
     
     
