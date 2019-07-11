@@ -41,7 +41,7 @@ empty = Semaphore(buffer)
 
 # PRODUCER FUNCTION
 def producer_function(name):
-    print(name," init")
+    print("Producer ",name," init")
     global tasks, buffer
     while True:
         # LOCKING THE POOL OF TASKS TO OBTAIN A ROW/COLUMN TASK
@@ -63,7 +63,7 @@ def producer_function(name):
                 # SUBS 1 TO ACCESS THE BUFFER
                 buffer_access.acquire()
                 # INSERTING ITEM TO BUFFER
-                print(name, " inserting into buffer ",item)
+                print("Producer ",name, " inserting into buffer ",item)
                 buffer.append(item)
                 # ADDING 1 TO THE BUFFER ACCES
                 buffer_access.release()
@@ -72,7 +72,7 @@ def producer_function(name):
 
 # CONSUMER FUNCTION
 def consumer_function(name):
-    print(name," init")
+    print("Consumer ",name," init")
     global tasks, buffer
     while True:
         # SUBS 1 TO FILLED SPACES IN BUFFER
@@ -88,7 +88,7 @@ def consumer_function(name):
         # CONSUMING THE ITEM MULTIPLICATION
         res=item[0]*item[1]
         # SENDING TO MYSQL
-        print(name, " sending ",res,item[2])
+        print("Consumer ",name, " sending ",res,item[2])
         lock2.acquire()
         mycursor.execute('update mazinger.results set result=result+"'+str(res)+'" , time=time+"'+str(int((item[3]-datetime.now()).microseconds/1000))+'" where results.row="'+str(item[2][0])+'" and results.column ="'+str(item[2][1])+'"')
         conn.commit()
